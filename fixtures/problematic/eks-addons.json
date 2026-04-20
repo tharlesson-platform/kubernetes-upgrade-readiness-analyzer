@@ -1,0 +1,10 @@
+[
+  {
+    "name": "vpc-cni",
+    "status": "upgrade-required"
+  },
+  {
+    "name": "aws-ebs-csi-driver",
+    "status": "unsupported"
+  }
+]
