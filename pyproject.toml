@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kubernetes-upgrade-readiness-analyzer"
+version = "0.1.0"
+description = "CLI para avaliar se manifests e clusters estão prontos para upgrade Kubernetes/EKS."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Tharlesson" }]
+dependencies = [
+  "typer>=0.12.0,<1.0.0",
+  "rich>=13.9.0,<14.0.0",
+  "PyYAML>=6.0.0,<7.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0,<9.0.0"
+]
+
+[project.scripts]
+kubernetes-upgrade-readiness-analyzer = "cli.main:run"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cli*", "scanners*", "rules*", "reports*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
