@@ -40,10 +40,21 @@ python -m pip install -e .[dev]
 kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/problematic --target-version 1.29
 ```
 
+## Reproducao guiada
+
+- Primeiro passo:
+  - `kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/problematic --target-version 1.29 --output-dir artifacts/1.29`
+- Segundo passo:
+  - `kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/problematic --target-version 1.30 --output-dir artifacts/1.30`
+- Para onboarding mais rapido:
+  - consulte `examples/README.md`
+  - siga `docs/reproduction-guide.md`
+
 ## Exemplos reais
 
 - `kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/problematic --target-version 1.29`
 - `kubernetes-upgrade-readiness-analyzer scan --manifests-path ./rendered --target-version 1.30`
+- `kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/problematic --target-version 1.30 --output-dir artifacts/1.30`
 
 ## Como isso ajuda SREs no dia a dia
 
