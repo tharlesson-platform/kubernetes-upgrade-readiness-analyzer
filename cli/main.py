@@ -6,7 +6,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from reports.renderers import render_markdown
+from reports.renderers import render_html, render_markdown
 from rules.catalog import evaluate_manifest_directory
 
 
@@ -33,4 +33,5 @@ def scan(
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     (output_dir / "report.md").write_text(render_markdown(report), encoding="utf-8")
+    (output_dir / "report.html").write_text(render_html(report), encoding="utf-8")
     console.print(f"readiness_score={report['readiness_score']} blockers={len(report['blockers'])}")
