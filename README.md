@@ -134,6 +134,7 @@ Para onboarding mais rapido:
 - Cria checklist reproduzível para times de plataforma e SRE.
 - Ajuda a priorizar correções de manifests antigos por criticidade.
 - Facilita handoff entre quem prepara manifests e quem aprova a mudança.
+- Entrega resumo visual por severidade e kind, com HTML pronto para compartilhamento.
 
 ## Limitacoes atuais
 
