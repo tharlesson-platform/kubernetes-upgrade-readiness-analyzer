@@ -1,7 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: payments-ingress
+  namespace: payments
 spec:
   ingressClassName: nginx
   rules:
@@ -20,8 +28,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: payments-api
-  labels:
-    pod-security.kubernetes.io/enforce: baseline
+  namespace: payments
 spec:
   replicas: 2
   selector:
@@ -42,6 +49,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: payments-api
+  namespace: payments
 spec:
   minAvailable: 1
   selector:

@@ -15,6 +15,7 @@ Os exemplos principais deste repositorio ficam em `fixtures/`, porque representa
 | --- | --- | --- |
 | `fixtures/problematic` | Mostrar falhas classicas de readiness | 4 blockers, 1 warning e score 0 |
 | `fixtures/ready` | Mostrar a baseline minima saudavel | 0 blockers, 0 warnings e score 100 |
+| `fixtures/api-removal` | Comparar a remoção da API de FlowSchema | 0 blockers em 1.31, 1 em 1.32 |
 
 ## Cenario problematico
 
@@ -39,7 +40,7 @@ Arquivos:
 
 - `fixtures/ready/platform.yaml`
   - `Ingress` ja em `networking.k8s.io/v1` com `ingressClassName`
-  - `Deployment` com label `pod-security.kubernetes.io/enforce`
+  - `Namespace` com `pod-security.kubernetes.io/enforce: baseline` e Deployment protegido por PDB
   - `CRD` em `apiextensions.k8s.io/v1` com `spec.versions`
 - `fixtures/ready/eks-addons.json`
   - addons marcados como `supported`
@@ -56,7 +57,7 @@ kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/problematic
 ```
 
 ```bash
-kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/problematic --target-version 1.30 --output-dir artifacts/1.30
+kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/api-removal --source-version 1.31 --target-version 1.32 --output-dir artifacts/api-1.32 --fail-on-blockers
 ```
 
 ```bash

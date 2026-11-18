@@ -8,7 +8,10 @@ Este documento resume os campos gerados pela ferramenta e como eles podem ser in
 | --- | --- | --- |
 | `title` | string | Nome logico do relatório |
 | `target_version` | string | Versao alvo informada na CLI |
-| `readiness_score` | integer | Score sintetico calculado a partir de blockers e warnings |
+| `source_version` | string ou null | Versão atual opcional |
+| `readiness_score` | integer ou null | Score calculado a partir dos achados. Fica nulo sem manifests ou com snapshot de outro alvo |
+| `upgrade_state` | string | `blocked` com blocker, `indeterminate` se faltam dados essenciais, `attention` com warnings ou `ready` para o escopo avaliado |
+| `coverage` | objeto | Contagem de manifests e situação do snapshot de addons EKS |
 | `blockers` | array | Findings impeditivos para um upgrade seguro |
 | `warnings` | array | Findings de atencao que pedem ajuste ou validacao |
 | `checklist` | array | Proximos passos operacionais sugeridos |
@@ -21,17 +24,24 @@ Cada item de `blockers` e `warnings` segue o mesmo formato:
 | `reason` | string | Motivo do finding |
 | `source` | string | Origem do arquivo que gerou o finding |
 
+Achados de API removida incluem `api_version`, `removed_in` e `impact`. O impacto pode ser `removed_during_upgrade`, `already_unavailable_at_source` ou `unavailable_at_target` quando a origem é omitida.
+
+`coverage.eks_addons` pode ser `matched`, `target_mismatch`, `unversioned` ou `missing`. `coverage.eks_addons_target_version` contém a versão declarada pelo snapshot quando fornecida.
+
 ## Exemplo resumido
 
 ```json
 {
-  "target_version": "1.29",
-  "readiness_score": 0,
+  "source_version": "1.31",
+  "target_version": "1.32",
+  "readiness_score": 75,
   "blockers": [
     {
-      "resource": "legacy-ingress",
-      "reason": "Use networking.k8s.io/v1",
-      "source": "fixtures/problematic/legacy.yaml"
+      "resource": "example-read-only",
+      "api_version": "flowcontrol.apiserver.k8s.io/v1beta3",
+      "removed_in": "1.32",
+      "impact": "removed_during_upgrade",
+      "source": "fixtures/api-removal/flowschema.yaml"
     }
   ]
 }
@@ -41,7 +51,7 @@ Cada item de `blockers` e `warnings` segue o mesmo formato:
 
 O markdown gerado organiza a leitura em quatro blocos:
 
-1. cabecalho com `target_version`
+1. cabeçalho com versões e cobertura
 2. score consolidado
 3. lista de blockers e warnings
 4. checklist final
@@ -70,7 +80,7 @@ Implicacoes praticas:
 
 Padroes simples de automacao que combinam bem com o formato atual:
 
-- falhar o job se `blockers` nao estiver vazio
+- usar `--fail-on-blockers` para obter código `1` com blockers e `2` sem manifests ou com snapshot de outro alvo, quando não há blocker comprovado
 - sinalizar aprovacao manual se `warnings` for maior que zero
 - armazenar `report.json` como artefato de build
 - publicar `report.md` no sumario do pipeline
@@ -78,7 +88,7 @@ Padroes simples de automacao que combinam bem com o formato atual:
 ## Limites do modelo atual
 
 - o relatório ainda nao agrega findings por namespace ou aplicacao
-- `target_version` ainda nao muda o catalogo de regras
+- o score reflete os manifests e os dados locais. Consulte `coverage` para identificar ausência de confirmação dos addons na versão-alvo
 - o formato markdown ainda nao inclui links, tabelas ou anotacoes de linha
 
 ## Leitura complementar

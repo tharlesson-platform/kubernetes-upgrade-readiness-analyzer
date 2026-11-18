@@ -22,6 +22,7 @@ Ao final deste passo a passo, a pessoa deve conseguir:
 | --- | --- | --- |
 | Problematico | `fixtures/problematic` | 4 blockers, 1 warning e score 0 |
 | Saudavel | `fixtures/ready` | 0 blockers, 0 warnings e score 100 |
+| Remoção de API | `fixtures/api-removal` | 0 blockers em 1.31 e 1 blocker em 1.32 |
 
 ## Primeira execucao recomendada
 
@@ -44,14 +45,14 @@ O que voce deve encontrar nesse cenário:
 ## Segunda execucao recomendada
 
 ```bash
-kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/problematic --target-version 1.30 --output-dir artifacts/1.30
+kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/api-removal --target-version 1.31 --output-dir artifacts/api-1.31 --fail-on-blockers
+kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/api-removal --source-version 1.31 --target-version 1.32 --output-dir artifacts/api-1.32 --fail-on-blockers
 ```
 
 Leitura importante:
 
-- hoje o campo `target_version` muda no relatório
-- a matriz de regras ainda nao e version-aware
-- por isso, neste estado atual do projeto, `1.29` e `1.30` devem produzir os mesmos findings para o mesmo fixture
+- o primeiro scan retorna `0` e o segundo retorna `1` após gravar seus relatórios
+- compare o achado `FlowSchema` com `removed_in=1.32` e `impact=removed_during_upgrade`
 
 ## Terceira execucao recomendada
 
@@ -70,7 +71,8 @@ Esse passo mostra a baseline minima esperada:
 | Comando | Blockers | Warnings | Score | Observacao |
 | --- | ---: | ---: | ---: | --- |
 | `fixtures/problematic` `1.29` | 4 | 1 | 0 | Ambiente claramente nao pronto |
-| `fixtures/problematic` `1.30` | 4 | 1 | 0 | Mesmo resultado, porque as regras ainda nao variam por versao |
+| `fixtures/api-removal` `1.31` | 0 | 0 | 100 | FlowSchema v1beta3 ainda disponível no alvo |
+| `fixtures/api-removal` `1.32` | 1 | 0 | 75 | FlowSchema v1beta3 removido no alvo |
 | `fixtures/ready` `1.29` | 0 | 0 | 100 | Baseline saudavel para o conjunto atual de regras |
 
 ## O que revisar na saida
@@ -106,7 +108,7 @@ Esse passo mostra a baseline minima esperada:
 - Apontar para manifests nao renderizados quando o time usa Helm e esperar uma leitura completa.
 - Misturar arquivos de varios ambientes no mesmo diretorio de teste.
 - Avaliar uma versao alvo sem saber qual e a versao atual do cluster.
-- Assumir que `target_version` ja muda automaticamente o catalogo de regras.
+- Usar score `100` como confirmação de sinais do cluster ou de addons ausentes no scan. Verifique o campo `coverage`.
 
 ## Fluxo recomendado para onboarding
 
