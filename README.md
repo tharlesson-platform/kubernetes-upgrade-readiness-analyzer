@@ -205,7 +205,7 @@ GitHub: https://github.com/tharlesson
 
 ## Validação em CI local isolado
 
-O workflow `ci` usa Python 3.12 em uma VM descartável, com label exclusiva `readiness-run-<run_id>`, sem volumes do host, Docker do Mac, agente SSH ou credenciais adicionais. O supervisor admite somente o SHA e o workflow revisados; um push novo depende de nova admissão local. Pull requests mantêm o gatilho, mas precisam de admissão explícita antes de executar no pool.
+O workflow `ci` roda em pull requests e em pushes à `main`. Cada execução usa Python 3.12 em uma VM descartável com label exclusiva `readiness-run-<run_id>`, sem volumes do host, Docker do Mac, agente SSH ou credenciais adicionais. O supervisor exige admissão explícita do SHA e do workflow revisados antes da execução.
 
 O Code Quality gerenciado usa a label `quality-isolated-kubernetes-upgrade-readiness-analyzer` em um pool separado. A análise continua obrigatória onde configurada; mudar o runner não comprova que a análise passou. Antes de mesclar, confira os resultados do SHA atual no GitHub.
 
