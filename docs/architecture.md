@@ -25,6 +25,10 @@ O objetivo da arquitetura atual e manter o fluxo simples:
 - `rules/catalog.py`
   - concentra as regras de manifests
   - calcula blockers, warnings e score final
+- `rules/api_versions.py`
+  - associa API e kind à primeira versão em que a API deixou de ser servida
+- `rules/workloads.py`
+  - verifica políticas Pod Security do Namespace e seletores de PDB contra os labels dos Pods
 - `rules/addons.py`
   - transforma status de addons em findings operacionais
 - `reports/renderers.py`
@@ -33,13 +37,13 @@ O objetivo da arquitetura atual e manter o fluxo simples:
 ## Fluxo detalhado
 
 1. O operador chama `kubernetes-upgrade-readiness-analyzer scan`.
-2. A CLI resolve `manifests_path`, `target_version` e `output_dir`.
+2. A CLI resolve o diretório de manifests, a versão-alvo, a origem opcional e a saída.
 3. O scanner de manifests percorre YAMLs do diretório.
 4. O scanner de addons tenta abrir `eks-addons.json`.
-5. O catalogo aplica regras estaticas sobre os documentos carregados.
+5. O catálogo identifica APIs indisponíveis no destino e classifica o impacto da remoção conforme a origem.
 6. A avaliacao de addons classifica cada item como blocker, warning ou neutro.
 7. O score de readiness e calculado.
-8. O resultado final e gravado em `report.json` e `report.md`.
+8. O resultado é gravado em JSON, Markdown e HTML. Se o gate estiver ativo, o código do processo é definido após a gravação.
 
 ## Entradas suportadas hoje
 
@@ -48,18 +52,24 @@ O objetivo da arquitetura atual e manter o fluxo simples:
 - YAML puro
 - Helm ja renderizado
 - multiplos documentos no mesmo arquivo
+- outputs `kind: List` com itens Kubernetes individuais
 
 ### Addons
 
 - arquivo local `eks-addons.json`
-- estrutura esperada:
+- formato versionado recomendado:
 
 ```json
-[
-  { "name": "vpc-cni", "status": "upgrade-required" },
-  { "name": "aws-ebs-csi-driver", "status": "unsupported" }
-]
+{
+  "target_version": "1.32",
+  "addons": [
+    { "name": "vpc-cni", "status": "upgrade-required" },
+    { "name": "aws-ebs-csi-driver", "status": "unsupported" }
+  ]
+}
 ```
+
+O formato anterior de lista continua aceito com cobertura `unversioned`. O formato versionado aplica os status somente quando o minor coincide com o alvo.
 
 ## Regras ativas no catalogo atual
 
@@ -70,7 +80,8 @@ O objetivo da arquitetura atual e manter o fluxo simples:
 | API removida | `policy/v1beta1` `PodSecurityPolicy` | Blocker | PSP foi removido |
 | API removida | `apiextensions.k8s.io/v1beta1` `CustomResourceDefinition` | Blocker | CRD precisa ser promovida para `v1` |
 | Qualidade minima | `Ingress` `v1` sem `ingressClassName` | Warning | Risco de comportamento ambiguo no controlador |
-| Qualidade minima | `Deployment` sem label de pod security | Warning | Indica preparo incompleto para politicas modernas |
+| Segurança de Pods | `Deployment` em namespace sem enforce baseline ou restricted declarado | Warning | Verificar a política efetiva antes do upgrade |
+| Disponibilidade | `Deployment` com mais de uma réplica e zero ou múltiplos PDBs correspondentes | Warning | Revisar seletores e garantias de disrupção |
 | Qualidade minima | `CRD` `v1` sem `spec.versions` | Warning | Estrutura incompleta para API `v1` |
 | Addon EKS | `status=unsupported` | Blocker | Addon nao suporta a versao alvo pretendida |
 | Addon EKS | `status=upgrade-required` | Warning | Upgrade do addon deve ocorrer antes do cluster |
@@ -99,14 +110,14 @@ Saidas produzidas:
 
 ## Limitacoes atuais
 
-- `target_version` ainda nao altera a matriz de regras; hoje ele funciona como contexto do relatório.
+- O catálogo de remoções é curado. O scan não valida toda a superfície de APIs e não inspeciona tráfego ou descoberta do cluster.
 - A analise de addons depende do snapshot fornecido localmente.
 - O score e agregado por diretório, sem agregacao por namespace, app ou ambiente.
 - Nao ha anotacao nativa em PR, SARIF ou comentario em CI.
 
 ## Pontos de extensao
 
-- Tornar o catalogo de regras version-aware por release Kubernetes.
+- Ampliar e atualizar as APIs cobertas no catálogo de remoções.
 - Adicionar matriz mais rica para addons EKS.
 - Agrupar findings por namespace, app, equipe ou tenant.
 - Emitir formatos extras de relatorio para pipeline e observabilidade.

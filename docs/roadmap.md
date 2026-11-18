@@ -19,7 +19,8 @@ Para isso, a ferramenta precisa equilibrar:
 Hoje o projeto entrega:
 
 - leitura local de YAML e `eks-addons.json`
-- deteccao de APIs removidas conhecidas
+- detecção de APIs removidas por versão-alvo, com classificação opcional pela origem
+- cobertura declarada de snapshots EKS e gate de CI com saída adequada para automação
 - warnings basicos de `Ingress`, `Deployment` e `CRD`
 - score simples por diretório
 - saida em `report.json` e `report.md`
@@ -46,7 +47,7 @@ Objetivo:
 
 Entregaveis:
 
-- catalogo version-aware por versao alvo Kubernetes
+- ampliar o catálogo de remoções por versão Kubernetes
 - matriz mais rica de addons EKS por versao suportada
 - findings com severidade, categoria e sugestao de remediacao
 - comparativo mais claro entre findings de manifests e de addons
@@ -67,7 +68,7 @@ Entregaveis:
 
 - score por namespace, app ou unidade de deploy
 - suporte a allowlist ou suppressions justificadas
-- gate automatico em pipeline de upgrade
+- integrar o gate aos pipelines de upgrade e arquivar os relatórios
 - saidas extras para CI, como anotacoes e formatos mais estruturados
 - exemplos de integracao com pull request, changelog e checklist de janela
 
@@ -124,7 +125,6 @@ Uma fase so deve ser considerada concluida quando houver:
 
 Se o objetivo for entregar mais valor rapido, a melhor sequencia e:
 
-1. tornar `target_version` realmente determinante no catalogo
-2. enriquecer a matriz de addons EKS
+1. enriquecer a matriz de addons EKS
+2. integrar o gate aos pipelines de upgrade e ao CLI `sre`
 3. adicionar score por namespace/app
-4. publicar gate automatizado de pipeline

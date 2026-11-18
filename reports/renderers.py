@@ -3,12 +3,22 @@ from __future__ import annotations
 from html import escape
 
 
+def _coverage_summary(report: dict) -> str:
+    coverage = report["coverage"]
+    addons_target = coverage["eks_addons_target_version"]
+    addons = coverage["eks_addons"] if addons_target is None else f"{coverage['eks_addons']} ({addons_target})"
+    return f"{coverage['manifest_count']} manifests, addons EKS: {addons}"
+
+
 def render_markdown(report: dict) -> str:
+    score = report["readiness_score"] if report["readiness_score"] is not None else "n/a"
     lines = [
         "# Kubernetes Upgrade Readiness Analyzer",
         "",
+        f"- source_version: `{report['source_version'] or 'n/a'}`",
         f"- target_version: `{report['target_version']}`",
-        f"- readiness_score: `{report['readiness_score']}`",
+        f"- coverage: `{_coverage_summary(report)}`",
+        f"- readiness_score: `{score}`",
         f"- upgrade_state: `{report['upgrade_state']}`",
         f"- summary_by_severity: `{report['summary_by_severity']}`",
         f"- summary_by_kind: `{report['summary_by_kind']}`",
@@ -25,6 +35,7 @@ def render_markdown(report: dict) -> str:
 
 
 def render_html(report: dict) -> str:
+    score = report["readiness_score"] if report["readiness_score"] is not None else "n/a"
     findings = "".join(
         f"<tr><td>{escape(item['severity'])}</td><td>{escape(item.get('category', 'general'))}</td><td>{escape(str(item.get('resource') or 'n/a'))}</td><td>{escape(item['reason'])}</td></tr>"
         for item in report["findings"]
@@ -70,8 +81,9 @@ def render_html(report: dict) -> str:
   <body>
     <section class='hero'>
       <h1>Kubernetes Upgrade Readiness Analyzer</h1>
-      <p><strong>target_version:</strong> {escape(report['target_version'])}</p>
-      <p><strong>readiness_score:</strong> {report['readiness_score']} | <strong>upgrade_state:</strong> {escape(report['upgrade_state'])}</p>
+      <p><strong>source_version:</strong> {escape(report['source_version'] or 'n/a')} | <strong>target_version:</strong> {escape(report['target_version'])}</p>
+      <p><strong>coverage:</strong> {escape(_coverage_summary(report))}</p>
+      <p><strong>readiness_score:</strong> {score} | <strong>upgrade_state:</strong> {escape(report['upgrade_state'])}</p>
       <p><strong>summary_by_severity:</strong> {escape(str(report['summary_by_severity']))}</p>
     </section>
     <table>

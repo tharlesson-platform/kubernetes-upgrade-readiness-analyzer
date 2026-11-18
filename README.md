@@ -17,18 +17,16 @@ CLI para avaliar se manifests e snapshots de addons estao prontos para upgrade K
 
 ## O que a ferramenta verifica hoje
 
-- APIs removidas ou deprecated em manifests:
-  - `extensions/v1beta1` `Ingress`
-  - `networking.k8s.io/v1beta1` `Ingress`
-  - `policy/v1beta1` `PodSecurityPolicy`
-  - `apiextensions.k8s.io/v1beta1` `CustomResourceDefinition`
+- APIs conhecidas que deixaram de ser servidas na versão-alvo. O catálogo inclui Ingress, PSP, CRD, PDB, HPA e FlowSchema. A versão de origem indica se a API já estava indisponível ou se a remoção ocorre no upgrade. [Guia de migração do Kubernetes](https://kubernetes.io/docs/reference/using-api/deprecation-guide/).
 - Qualidade minima em recursos ja migrados:
   - `Ingress` `networking.k8s.io/v1` sem `ingressClassName`
-  - `Deployment` sem label `pod-security.kubernetes.io/enforce`
+  - `Deployment` em namespace sem política Pod Security `baseline` ou `restricted` declarada nos manifests
+  - `Deployment` com mais de uma réplica cujos Pods têm zero ou múltiplos PDBs selecionando seus labels
   - `CustomResourceDefinition` `v1` sem bloco `spec.versions`
 - Snapshot de addons EKS em `eks-addons.json`:
   - `unsupported` vira blocker
   - `upgrade-required` vira warning
+  - O relatório indica se o snapshot é ausente, sem versão, correspondente ao alvo ou de outro alvo.
 
 ## Arquitetura
 
@@ -67,6 +65,17 @@ python -m pip install -e .[dev]
 kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/problematic --target-version 1.29
 ```
 
+Use `--source-version` para informar o minor de origem. O CLI aceita versões `1.32`, `v1.32` e `v1.32.1`. Para usar o mesmo scan como gate de CI:
+
+```bash
+kubernetes-upgrade-readiness-analyzer scan \
+  --manifests-path fixtures/api-removal \
+  --source-version 1.31 --target-version 1.32 \
+  --output-dir artifacts/upgrade-1.32 --fail-on-blockers
+```
+
+Com o gate, o CLI grava os três relatórios e retorna código `1` se houver blocker ou `2` se os dados forem inconclusivos. Entrada inválida ou erro de I/O também retorna `2`. O modo de relatório padrão retorna `0` após gravar um scan válido.
+
 ## Fluxo recomendado de uso
 
 1. Rode o cenário com falhas em `fixtures/problematic`.
@@ -80,6 +89,8 @@ kubernetes-upgrade-readiness-analyzer scan --manifests-path fixtures/problematic
 | --- | --- | ---: | ---: | ---: | --- |
 | Problematico | `fixtures/problematic` | 4 | 1 | 0 | Demonstrar APIs removidas, CRD antiga e addons EKS com risco |
 | Saudavel | `fixtures/ready` | 0 | 0 | 100 | Mostrar a baseline minima esperada depois da correcao |
+| Remoção no destino 1.31 | `fixtures/api-removal` | 0 | 0 | 100 | FlowSchema v1beta3 ainda é servido |
+| Remoção no destino 1.32 | `fixtures/api-removal` | 1 | 0 | 75 | FlowSchema v1beta3 é removido |
 
 ## Como interpretar o score
 
@@ -92,14 +103,16 @@ readiness_score = max(0, 100 - (25 x blockers) - (5 x warnings))
 Leitura sugerida:
 
 - `100`: baseline limpa para o conjunto de regras atual.
-- `95` a `75`: sem blockers, mas com warnings que merecem ajuste antes da mudança.
+- `95` a `75`: consulte os achados. Um blocker sozinho dá score `75`.
 - `70` ou menos: o ambiente pede analise cuidadosa.
-- `0`: existe uma combinacao de blockers suficiente para impedir um upgrade seguro.
+- `0`: penalidades atingiram o piso do score.
+- `null`: sem manifests Kubernetes ou com um snapshot de addons explicitamente incompatível com o alvo.
 
 ## Saidas geradas
 
 - `report.json`: formato mais facil para integrações, parse em CI ou armazenamento.
 - `report.md`: formato de leitura humana para checklist, review e registro da janela.
+- `report.html`: visualização do score, da cobertura e dos achados.
 
 Cada finding traz:
 
@@ -138,8 +151,8 @@ Para onboarding mais rapido:
 
 ## Limitacoes atuais
 
-- `target_version` ainda aparece no relatório, mas o catalogo de regras ainda nao muda por versao alvo.
-- A analise de addons depende do snapshot local `eks-addons.json`, sem consulta externa.
+- O catálogo cobre APIs selecionadas. A análise local não consulta o cluster, métricas de uso de APIs, webhooks em execução ou EKS Upgrade Insights.
+- A análise de addons depende do snapshot local `eks-addons.json`. Listas sem versão continuam aceitas e são sinalizadas como `unversioned`.
 - O scanner espera manifests YAML ou Helm ja renderizado.
 - O score atual e global por diretório, sem agrupamento por namespace, app ou tenant.
 
@@ -155,8 +168,8 @@ Para onboarding mais rapido:
 
 Roadmap detalhado: [docs/roadmap.md](docs/roadmap.md)
 
-- Fase 1: tornar o catalogo version-aware e enriquecer a matriz de addons EKS.
-- Fase 2: adicionar score por namespace/app e gates automatizados em pipeline.
+- Fase 1: ampliar cobertura por versão e enriquecer a matriz de addons EKS.
+- Fase 2: adicionar score por namespace/app e integrar o gate aos pipelines de upgrade.
 - Fase 3: expandir ingestao de dados de cluster, CRDs customizadas e historico de readiness.
 
 ## Licença
